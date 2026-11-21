@@ -1,0 +1,123 @@
+{
+  "test": "platform-stage1",
+  "ticket": "ekido-ai/ekido-internal#66",
+  "base": "https://ekido-staging.duckdns.org",
+  "started_at": "2026-11-21T19:29:52Z",
+  "duration": "5m",
+  "total_target_per_second": 6,
+  "machine": "Apple M2 laptop, macOS 26.7.1, k6 v2.4.0, on a home network in India (client, not the server)",
+  "k6_version": "v2.4.0",
+  "endpoints": {
+    "signin": {
+      "requests": 150,
+      "target_per_second": 0.5,
+      "p50_ms": 52.911500000000004,
+      "p90_ms": 68.7175,
+      "p95_ms": 72.11595,
+      "p99_ms": 205.67772999999994,
+      "max_ms": 348.669,
+      "error_rate": 0
+    },
+    "me": {
+      "requests": 301,
+      "target_per_second": 1,
+      "p50_ms": 53.176,
+      "p90_ms": 61.746,
+      "p95_ms": 66.245,
+      "p99_ms": 161.83,
+      "max_ms": 1786.687,
+      "error_rate": 0
+    },
+    "team": {
+      "requests": 301,
+      "target_per_second": 1,
+      "p50_ms": 53.74,
+      "p90_ms": 65.565,
+      "p95_ms": 72.373,
+      "p99_ms": 332.298,
+      "max_ms": 837.808,
+      "error_rate": 0
+    },
+    "keys": {
+      "requests": 301,
+      "target_per_second": 1,
+      "p50_ms": 53.849,
+      "p90_ms": 61.66,
+      "p95_ms": 63.858,
+      "p99_ms": 247.398,
+      "max_ms": 849.256,
+      "error_rate": 0
+    },
+    "quotes": {
+      "requests": 151,
+      "target_per_second": 0.5,
+      "p50_ms": 61.278,
+      "p90_ms": 71.637,
+      "p95_ms": 74.54349999999998,
+      "p99_ms": 300.1109999999998,
+      "max_ms": 568.736,
+      "error_rate": 0
+    },
+    "recipes": {
+      "requests": 301,
+      "target_per_second": 1,
+      "p50_ms": 39.386,
+      "p90_ms": 48.594,
+      "p95_ms": 50.405,
+      "p99_ms": 323.237,
+      "max_ms": 1067.497,
+      "error_rate": 0
+    },
+    "jobs": {
+      "requests": 301,
+      "target_per_second": 1,
+      "p50_ms": 44.024,
+      "p90_ms": 49.54,
+      "p95_ms": 53.084,
+      "p99_ms": 98.631,
+      "max_ms": 403.984,
+      "error_rate": 0
+    }
+  },
+  "checks": {
+    "recipes 200": {
+      "passes": 301,
+      "fails": 0
+    },
+    "me 200": {
+      "passes": 301,
+      "fails": 0
+    },
+    "team 200": {
+      "passes": 301,
+      "fails": 0
+    },
+    "signin refused a wrong token": {
+      "passes": 150,
+      "fails": 0
+    },
+    "jobs 200": {
+      "passes": 301,
+      "fails": 0
+    },
+    "keys 200": {
+      "passes": 301,
+      "fails": 0
+    },
+    "quote 201": {
+      "passes": 151,
+      "fails": 0
+    }
+  },
+  "target": {
+    "site": "https://ekido-staging.duckdns.org",
+    "platform_main_at_test_time": "ekido-ai/ekido-platform@7891c63 (20 Nov 20:14 UTC); the deployed commit isn't exposed by any endpoint"
+  },
+  "network_baseline": {
+    "method": "30 x curl to /sepolia/healthz right after the run",
+    "tcp_connect_median_ms": 37.3,
+    "note": "k6 reuses connections, so each request is about one round trip (~37 ms) plus server time"
+  },
+  "evidence_type": "load test against staging from one client; latencies include the client's network",
+  "dataset_setup": "one ticket-sorter-hinglish dataset (1 train, 20 test rows) created in setup(); 151 quotes were written for it"
+}

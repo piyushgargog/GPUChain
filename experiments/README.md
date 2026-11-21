@@ -180,3 +180,40 @@ The file records no device, GPU name or driver, so it is not evidence of a GPU r
 | `results/external_vaibhav_probation_20261107/` | The real-model margin run, the identity it was pinned to, and its write-up |
 | `results/probation_noise_synthetic_20261105_215234.json` | The earlier synthetic margin measurement, CPU only |
 | `results/external_vaibhav_t4_20261106/` | The T4 quality comparison, the T4 start-leg metadata sent with it, and notes on how they were produced |
+
+## Platform API load test at stage-1 rates (k6)
+
+Ticket P9 (ekido-ai/ekido-internal#66). Script: [`k6/platform-stage1.js`](k6/platform-stage1.js). Raw result: [`results/scale/k6-2026-11-22.json`](results/scale/k6-2026-11-22.json).
+
+**Rate.** Stage 1 is 1,000 teams. [14-scaling-design.md](https://github.com/ekido-ai/ekido-internal/blob/main/docs/ekido/14-scaling-design.md) §3.7 gives stage 2 (100,000 teams) "tens of requests per second on average, hundreds at peak". Scaled by 1/100 that's ~0.3 req/s average and ~3 req/s at peak for stage 1 *(estimate)*. The run used **6 req/s in total, twice that peak, for 5 minutes**: 1 req/s each to `/v1/me`, the team page, the key page, the job list and `/v1/recipes`, and 0.5 req/s each to sign-in and quotes.
+
+```bash
+# A test account on staging: SESSION is its ekido_session cookie, ORG its team id. Never commit either.
+SESSION=… ORG=… OUT=experiments/results/scale/k6-$(date +%F).json k6 run experiments/k6/platform-stage1.js
+```
+
+Sign-in is measured by `POST /v1/auth/email/verify` with a wrong token. That runs the sign-in lookup without sending an email, and a 4xx is the expected answer. The platform has no customer job list yet, so "the job list" is the coordinator's `GET /sepolia/jobs?limit=40`, the one the dashboard and admin pages read.
+
+### Result (22 Nov 2026 01:00 IST, i.e. 21 Nov 19:30 UTC; staging; client on a home network in India)
+
+| Endpoint | Requests | p50 | p95 | p99 | Errors |
+|---|---:|---:|---:|---:|---:|
+| `POST /v1/orgs/{org}/quotes` | 151 | **61 ms** | **75 ms** | 300 ms | 0 |
+| `GET /v1/orgs/{org}` (team) | 301 | 54 ms | 72 ms | 332 ms | 0 |
+| `POST /v1/auth/email/verify` (sign-in) | 150 | 53 ms | 72 ms | 206 ms | 0 |
+| `GET /v1/me` | 301 | 53 ms | 66 ms | 162 ms | 0 |
+| `GET /v1/orgs/{org}/api-keys` (keys) | 301 | 54 ms | 64 ms | 247 ms | 0 |
+| `GET /sepolia/jobs?limit=40` (job list) | 301 | 44 ms | 53 ms | 99 ms | 0 |
+| `GET /v1/recipes` | 301 | 39 ms | 50 ms | 323 ms | 0 |
+
+1,806 requests, no errors, every check passed. Stage-1 load is well within what one server handles.
+
+**Slowest: quotes, and why.** These latencies include the client's network: one round trip to staging was 37 ms (median of 30 TCP connects, in the JSON), and k6 reuses connections. Taking that off gives a rough server time:
+- `/v1/recipes`: ~2 ms. A static list with no database.
+- Job list: ~7 ms.
+- Signed-in reads (`me`, team, keys) and sign-in: ~16 ms. Each first looks up the session or token in Postgres (`user_for_session`), then runs its own query. The design's Valkey cache for sessions and keys (§4.3) isn't in yet.
+- **Quotes: ~24 ms.** It is the only write in the mix. It looks up the session, loads the dataset row with its stored rows, builds the quote (hashing the dataset and the terms), then `INSERT`s and `COMMIT`s a quote row.
+
+The p99 and max values (up to 1.8 s on `/v1/me`) are single outliers across all endpoints, with no pattern, so they are more likely the home network than the server. A run from a machine in the same region as staging would tell them apart.
+
+**Limits of this run:** one client, one test account and one dataset; staging's deployed commit isn't exposed (platform `main` was 7891c63 at the time); the 151 quotes it wrote are test rows on staging.
